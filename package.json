@@ -1,0 +1,67 @@
+{
+  "name": "better-auth-libsql",
+  "version": "1.0.0",
+  "description": "LibSQL database adapter for Better Auth",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run clean && npm run build && npm run test:run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/conneroisu/better-auth-libsql.git"
+  },
+  "keywords": [
+    "better-auth",
+    "libsql",
+    "turso",
+    "database",
+    "adapter",
+    "sqlite",
+    "auth",
+    "authentication",
+    "typescript"
+  ],
+  "author": "Conner Ohnesorge",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/conneroisu/better-auth-libsql/issues"
+  },
+  "homepage": "https://github.com/conneroisu/better-auth-libsql#readme",
+  "peerDependencies": {
+    "better-auth": ">=1.2.0"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.15.9"
+  },
+  "devDependencies": {
+    "@better-auth/cli": "^1.2.12",
+    "@types/node": "^24.0.14",
+    "better-auth": "^1.2.12",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
