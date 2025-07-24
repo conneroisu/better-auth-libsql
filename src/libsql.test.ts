@@ -89,9 +89,8 @@ describe("LibSQL Adapter Tests", async () => {
 
   await runAdapterTest({
     getAdapter: async (options) => {
-      // The test framework expects getAdapter to return an adapter function
-      // that can be called with options to get the adapter instance
-      return () => adapter(options || { database: { useNumberId: false } });
+      // The test framework expects getAdapter to return the adapter object directly
+      return adapter;
     },
   });
 });

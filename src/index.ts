@@ -139,15 +139,29 @@ export function libsqlAdapter(config: LibsqlAdapterConfig) {
     },
     adapter: ({ debugLog }) => {
       return {
-        create: async ({ model, data, select }) => {
+        create: async ({ model, data, select, forceAllowId }: any) => {
           const record = data as Record<string, unknown>;
-          const columns = Object.keys(record);
-          const values = Object.values(record) as InValue[];
+          
+          // Filter out undefined values and handle id based on forceAllowId
+          const filteredRecord: Record<string, unknown> = {};
+          for (const [key, value] of Object.entries(record)) {
+            if (value !== undefined) {
+              // Skip id field unless forceAllowId is true
+              if (key === 'id' && !forceAllowId) {
+                continue;
+              }
+              filteredRecord[key] = value;
+            }
+          }
+          
+          const columns = Object.keys(filteredRecord);
+          const values = Object.values(filteredRecord) as InValue[];
           const placeholders = columns.map(() => "?").join(", ");
           
-          const sql = `INSERT INTO ${model} (${columns.join(", ")}) VALUES (${placeholders}) RETURNING *`;
+          const selectClause = select && select.length > 0 ? select.join(", ") : "*";
+          const sql = `INSERT INTO ${model} (${columns.join(", ")}) VALUES (${placeholders}) RETURNING ${selectClause}`;
           
-          debugLog("create", { model, data, sql });
+          debugLog("create", { model, data, sql, forceAllowId });
           
           try {
             const result = await client.execute({
@@ -198,7 +212,7 @@ export function libsqlAdapter(config: LibsqlAdapterConfig) {
           
           const { sql: whereSql, args: whereArgs } = buildWhereClause(where as WhereCondition[]);
           
-          const sql = `UPDATE ${model} SET ${setClauses}${whereSql} RETURNING *`;
+          const sql = `UPDATE ${model} SET ${setClauses}${whereSql}`;
           const args = [...(Object.values(updateRecord) as InValue[]), ...whereArgs];
           
           debugLog("updateMany", { model, where, update, sql });
@@ -209,7 +223,7 @@ export function libsqlAdapter(config: LibsqlAdapterConfig) {
               args,
             });
             
-            return result.rows as any;
+            return result.rowsAffected;
           } catch (error) {
             throw new Error(`UpdateMany operation failed: ${error instanceof Error ? error.message : String(error)}`);
           }
@@ -282,10 +296,7 @@ export function libsqlAdapter(config: LibsqlAdapterConfig) {
           }
           
           if (sortBy) {
-            const orderClauses = Object.entries(sortBy as Record<string, "asc" | "desc">)
-              .map(([key, direction]) => `${key} ${direction === "asc" ? "ASC" : "DESC"}`)
-              .join(", ");
-            sql += ` ORDER BY ${orderClauses}`;
+            sql += ` ORDER BY ${sortBy.field} ${sortBy.direction === "asc" ? "ASC" : "DESC"}`;
           }
           
           if (limit) {

@@ -99,13 +99,25 @@ export function libsqlAdapter(config) {
         },
         adapter: ({ debugLog }) => {
             return {
-                create: async ({ model, data, select }) => {
+                create: async ({ model, data, select, forceAllowId }) => {
                     const record = data;
-                    const columns = Object.keys(record);
-                    const values = Object.values(record);
+                    // Filter out undefined values and handle id based on forceAllowId
+                    const filteredRecord = {};
+                    for (const [key, value] of Object.entries(record)) {
+                        if (value !== undefined) {
+                            // Skip id field unless forceAllowId is true
+                            if (key === 'id' && !forceAllowId) {
+                                continue;
+                            }
+                            filteredRecord[key] = value;
+                        }
+                    }
+                    const columns = Object.keys(filteredRecord);
+                    const values = Object.values(filteredRecord);
                     const placeholders = columns.map(() => "?").join(", ");
-                    const sql = `INSERT INTO ${model} (${columns.join(", ")}) VALUES (${placeholders}) RETURNING *`;
-                    debugLog("create", { model, data, sql });
+                    const selectClause = select && select.length > 0 ? select.join(", ") : "*";
+                    const sql = `INSERT INTO ${model} (${columns.join(", ")}) VALUES (${placeholders}) RETURNING ${selectClause}`;
+                    debugLog("create", { model, data, sql, forceAllowId });
                     try {
                         const result = await client.execute({
                             sql,
@@ -146,7 +158,7 @@ export function libsqlAdapter(config) {
                         .map((key) => `${key} = ?`)
                         .join(", ");
                     const { sql: whereSql, args: whereArgs } = buildWhereClause(where);
-                    const sql = `UPDATE ${model} SET ${setClauses}${whereSql} RETURNING *`;
+                    const sql = `UPDATE ${model} SET ${setClauses}${whereSql}`;
                     const args = [...Object.values(updateRecord), ...whereArgs];
                     debugLog("updateMany", { model, where, update, sql });
                     try {
@@ -154,7 +166,7 @@ export function libsqlAdapter(config) {
                             sql,
                             args,
                         });
-                        return result.rows;
+                        return result.rowsAffected;
                     }
                     catch (error) {
                         throw new Error(`UpdateMany operation failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -214,10 +226,7 @@ export function libsqlAdapter(config) {
                         args.push(...whereArgs);
                     }
                     if (sortBy) {
-                        const orderClauses = Object.entries(sortBy)
-                            .map(([key, direction]) => `${key} ${direction === "asc" ? "ASC" : "DESC"}`)
-                            .join(", ");
-                        sql += ` ORDER BY ${orderClauses}`;
+                        sql += ` ORDER BY ${sortBy.field} ${sortBy.direction === "asc" ? "ASC" : "DESC"}`;
                     }
                     if (limit) {
                         sql += ` LIMIT ?`;
